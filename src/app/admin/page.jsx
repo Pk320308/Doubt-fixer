@@ -142,11 +142,27 @@ export default function AdminPanel() {
 
   async function deleteUser(id) {
     if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+      // Attempt to clean up related records to prevent Foreign Key constraint errors
+      try {
+        await supabase.from('materials').delete().eq('teacher_id', id)
+        await supabase.from('tests').delete().eq('teacher_id', id)
+        await supabase.from('classes_schedule').delete().eq('teacher_id', id)
+        await supabase.from('attendance').delete().eq('teacher_id', id)
+        await supabase.from('student_performance').delete().eq('teacher_id', id)
+        await supabase.from('announcements').delete().eq('sender_id', id)
+        
+        await supabase.from('attendance').delete().eq('student_id', id)
+        await supabase.from('student_performance').delete().eq('student_id', id)
+        await supabase.from('student_enrollments').delete().eq('student_id', id)
+      } catch (e) {
+        console.warn('Cleanup warning:', e)
+      }
+
       const { error } = await supabase.rpc('delete_user_by_admin', { target_user_id: id })
       if (!error) {
         setUsers(users.filter((u) => u.id !== id))
       } else {
-        alert('Failed to delete user. Make sure you ran the SQL script.')
+        alert('Failed to delete user: ' + error.message)
       }
     }
   }
