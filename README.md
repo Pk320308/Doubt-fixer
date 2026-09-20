@@ -53,3 +53,4 @@ Make sure you have Node.js installed on your local machine.
 *Sensitive data (like Supabase API Keys, database URLs, and admin credentials) are strictly managed via local environment variables (`.env.local`) and are ignored by version control. Ensure you setup your own `.env.local` before running the app.*
  
  
+ 
