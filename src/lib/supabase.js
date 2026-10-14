@@ -17,12 +17,12 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 
 export async function checkDatabaseHealth() {
   try {
-    const { data, error } = await supabase.rpc('health_check')
+    const { data, error } = await supabase.from('profiles').select('id').limit(1)
     if (error) {
-      console.error('Database health check failed:', error)
-      return null
+      console.warn('Database health check warning (maybe tables not created yet):', error.message)
+      return false
     }
-    return data
+    return true
   } catch (err) {
     console.error('Database connection error:', err)
     return null
