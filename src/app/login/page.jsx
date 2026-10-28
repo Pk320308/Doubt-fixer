@@ -95,11 +95,17 @@ export default function LoginPage() {
         throw new Error(limitCheck.message || 'You have exceeded the monthly limit of 2 password resets.')
       }
 
-      // 2. Trigger Supabase Password Recovery OTP Email
-      const { error: resetErr } = await supabase.auth.resetPasswordForEmail(resetEmail.trim())
+      // 2. Trigger Supabase Password Recovery Email with redirectTo
+      const redirectUrl = typeof window !== 'undefined'
+        ? `${window.location.origin}/reset-password`
+        : 'https://doubt-fixer.vercel.app/reset-password'
+
+      const { error: resetErr } = await supabase.auth.resetPasswordForEmail(resetEmail.trim(), {
+        redirectTo: redirectUrl
+      })
       if (resetErr) throw resetErr
 
-      setInfo(`An OTP verification code has been sent to ${resetEmail.trim()}. Please check your Gmail inbox (and Spam folder).`)
+      setInfo(`Password reset instructions sent to ${resetEmail.trim()}! Check your Gmail inbox and click "Reset password" (or enter your 6-digit code below if received).`)
       setResetStep('verify')
     } catch (err) {
       setError(err.message || 'Failed to send OTP. Please try again.')

@@ -36,9 +36,26 @@ export function AuthProvider({ children }) {
       setLoading(false)
     })
 
+    // Intercept recovery token in URL hash if landing on any page
+    if (typeof window !== 'undefined' && window.location.hash.includes('type=recovery')) {
+      if (!window.location.pathname.includes('/reset-password')) {
+        window.location.href = '/reset-password' + window.location.hash
+        return
+      }
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session)
       setUser(session?.user ?? null)
+
+      // When user clicks the reset password link in their email, redirect to the Set New Password page
+      if (_event === 'PASSWORD_RECOVERY') {
+        if (typeof window !== 'undefined' && !window.location.pathname.includes('/reset-password')) {
+          window.location.href = '/reset-password'
+          return
+        }
+      }
+
       if (session?.user) {
         await fetchProfile(session.user.id)
       } else {
