@@ -390,6 +390,7 @@ export default function TeacherDashboard() {
                               </div>
                             </div>
                           </div>
+                          <div className="flex flex-row items-center gap-2 mt-4 sm:mt-0 pt-2 sm:pt-0">
                             <button 
                               type="button" 
                               onClick={() => handleOpenFile(material.file_url)} 
