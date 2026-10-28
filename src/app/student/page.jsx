@@ -18,6 +18,18 @@ export default function StudentDashboard() {
   const [teachers, setTeachers] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedType, setSelectedType] = useState('all')
+
+  const handleOpenFile = (url) => {
+    if (!url) {
+      alert('File link is not available.')
+      return
+    }
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      window.open(url, '_blank', 'noopener,noreferrer')
+    } else {
+      alert('Cannot open file: This material has an invalid or local file link (' + url + '). Please contact the teacher or admin to re-upload the PDF.')
+    }
+  }
   const [enrollmentError, setEnrollmentError] = useState(null)
 
   // Enrollment Form State
@@ -382,7 +394,13 @@ export default function StudentDashboard() {
                                   <span>•</span>
                                   <span>{material.subject}</span>
                                 </div>
-                                <a href={material.file_url} target="_blank" rel="noopener noreferrer" className="inline-block mt-4 text-sm font-medium bg-primary-600/20 text-primary-300 px-4 py-1.5 rounded-lg hover:bg-primary-600/30 transition-colors">View Material</a>
+                                <button 
+                                  type="button"
+                                  onClick={() => handleOpenFile(material.file_url)}
+                                  className="inline-block mt-4 text-sm font-medium bg-primary-600/20 text-primary-300 px-4 py-1.5 rounded-lg hover:bg-primary-600/30 transition-colors cursor-pointer"
+                                >
+                                  View Material
+                                </button>
                               </div>
                             </div>
                           </div>

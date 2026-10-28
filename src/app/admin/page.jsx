@@ -161,9 +161,33 @@ export default function AdminPanel() {
       const { error } = await supabase.rpc('delete_user_by_admin', { target_user_id: id })
       if (!error) {
         setUsers(users.filter((u) => u.id !== id))
+        alert('User deleted successfully!')
       } else {
         alert('Failed to delete user: ' + error.message)
       }
+    }
+  }
+
+  async function deleteMaterial(id) {
+    if (!confirm('Are you sure you want to delete this material?')) return
+    const { error } = await supabase.from('materials').delete().eq('id', id)
+    if (error) {
+      alert('Failed to delete material: ' + error.message)
+    } else {
+      setMaterials(materials.filter((m) => m.id !== id))
+      alert('Material deleted successfully!')
+    }
+  }
+
+  function handleOpenFile(fileUrl) {
+    if (!fileUrl) {
+      alert('No file URL available for this material.')
+      return
+    }
+    if (fileUrl.startsWith('http://') || fileUrl.startsWith('https://')) {
+      window.open(fileUrl, '_blank', 'noopener,noreferrer')
+    } else {
+      alert(`Cannot open local file: This material has an invalid file path (${fileUrl}). Files must be uploaded directly or use a valid https:// link. You can delete this invalid record and upload it again.`)
     }
   }
 
@@ -875,15 +899,22 @@ export default function AdminPanel() {
                                 <td className="p-4 text-slate-300">
                                   {teacher ? teacher.full_name : (rpcError ? 'Unknown (Run SQL script)' : 'Loading...')}
                                 </td>
-                                <td className="p-4">
-                                  <a
-                                    href={m.file_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-primary-400 hover:text-primary-300 transition-colors text-sm font-medium"
+                                <td className="p-4 flex items-center gap-3">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenFile(m.file_url)}
+                                    className="text-primary-400 hover:text-primary-300 transition-colors text-sm font-medium hover:underline cursor-pointer"
                                   >
                                     View File
-                                  </a>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => deleteMaterial(m.id)}
+                                    className="text-red-400 hover:text-red-300 p-1.5 hover:bg-red-500/10 rounded transition-colors"
+                                    title="Delete Material"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
                                 </td>
                               </tr>
                             );

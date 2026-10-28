@@ -43,6 +43,8 @@ export default function TeacherDashboard() {
   const [expandedPerformance, setExpandedPerformance] = useState(null)
 
   // Forms Data
+  const [uploadMode, setUploadMode] = useState('file') // 'file' or 'link'
+  const [selectedFile, setSelectedFile] = useState(null)
   const [uploadData, setUploadData] = useState({
     title: '', description: '', file_url: '', material_type: 'notes', subject: '', class_level: ''
   })
@@ -126,13 +128,66 @@ export default function TeacherDashboard() {
   async function handleUpload(e) {
     e.preventDefault()
     setSubmitting(true)
-    const { error } = await supabase.from('materials').insert([{ ...uploadData, teacher_id: profile?.id }])
-    setSubmitting(false)
-    if (!error) {
+
+    try {
+      let finalFileUrl = uploadData.file_url
+
+      if (uploadMode === 'file') {
+        if (!selectedFile) {
+          alert('Please select a PDF or Document file to upload.')
+          setSubmitting(false)
+          return
+        }
+
+        // Generate unique safe file name
+        const cleanName = selectedFile.name.replace(/[^a-zA-Z0-9.-]/g, '_')
+        const filePath = `${profile?.id || 'teacher'}_${Date.now()}_${cleanName}`
+
+        const { data: storageData, error: storageError } = await supabase
+          .storage
+          .from('materials')
+          .upload(filePath, selectedFile, {
+            cacheControl: '3600',
+            upsert: false
+          })
+
+        if (storageError) {
+          throw new Error('File storage upload failed: ' + storageError.message)
+        }
+
+        const { data: publicUrlData } = supabase
+          .storage
+          .from('materials')
+          .getPublicUrl(filePath)
+
+        finalFileUrl = publicUrlData.publicUrl
+      } else {
+        // Link mode validation
+        if (!finalFileUrl.startsWith('http://') && !finalFileUrl.startsWith('https://')) {
+          alert('Please enter a valid internet link starting with https:// (e.g. Google Drive link). Local files (file://) cannot be viewed across devices.')
+          setSubmitting(false)
+          return
+        }
+      }
+
+      const { error: dbError } = await supabase.from('materials').insert([{
+        ...uploadData,
+        file_url: finalFileUrl,
+        teacher_id: profile?.id
+      }])
+
+      if (dbError) throw dbError
+
       setShowUploadForm(false)
+      setSelectedFile(null)
       setUploadData({ title: '', description: '', file_url: '', material_type: 'notes', subject: '', class_level: '' })
       fetchData('materials')
-    } else alert(error.message)
+      alert('Material uploaded successfully!')
+    } catch (err) {
+      alert(err.message || 'An error occurred during upload.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   async function handleCreateTest(e) {
@@ -215,6 +270,15 @@ export default function TeacherDashboard() {
       fetchData('announcements')
       alert('Announcement sent to your students!')
     } else alert(error.message)
+  }
+
+  const handleOpenFile = (url) => {
+    if (!url) return alert('File URL is not available.')
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      window.open(url, '_blank', 'noopener,noreferrer')
+    } else {
+      alert(`Cannot open local file: This material has an invalid file path (${url}). Please delete this item and re-upload the file directly using the Upload PDF button.`)
+    }
   }
 
   const typeColors = {
@@ -326,8 +390,13 @@ export default function TeacherDashboard() {
                               </div>
                             </div>
                           </div>
-                          <div className="flex flex-row items-center gap-2 mt-4 sm:mt-0 pt-2 sm:pt-0">
-                            <a href={material.file_url} target="_blank" rel="noopener noreferrer" className="text-primary-400 hover:text-primary-300 text-sm font-medium px-3 py-1.5 bg-white/5 rounded-lg border border-white/5 hover:bg-white/10 transition-colors">View</a>
+                            <button 
+                              type="button" 
+                              onClick={() => handleOpenFile(material.file_url)} 
+                              className="text-primary-400 hover:text-primary-300 text-sm font-medium px-3 py-1.5 bg-white/5 rounded-lg border border-white/5 hover:bg-white/10 transition-colors cursor-pointer"
+                            >
+                              View
+                            </button>
                             <button onClick={() => handleDelete('materials', material.id)} className="text-red-400 hover:text-red-300 p-2 bg-red-500/10 rounded-lg hover:bg-red-500/20 transition-colors">
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -620,10 +689,57 @@ export default function TeacherDashboard() {
                     <label className="block text-sm font-medium text-slate-300 mb-1.5">Description</label>
                     <textarea value={uploadData.description} onChange={(e) => setUploadData({ ...uploadData, description: e.target.value })} className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-slate-500 outline-none focus:border-primary-500 transition-colors" rows={3} placeholder="Brief description"></textarea>
                   </div>
+                  {/* Mode Selector */}
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1.5">File URL *</label>
-                    <input type="url" required value={uploadData.file_url} onChange={(e) => setUploadData({ ...uploadData, file_url: e.target.value })} className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-slate-500 outline-none focus:border-primary-500 transition-colors" placeholder="https://drive.google.com/..." />
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Material Source *</label>
+                    <div className="grid grid-cols-2 gap-2 bg-slate-950/60 p-1 rounded-xl border border-white/10">
+                      <button
+                        type="button"
+                        onClick={() => setUploadMode('file')}
+                        className={`py-2 px-3 text-xs font-semibold rounded-lg transition-all ${uploadMode === 'file' ? 'bg-primary-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+                      >
+                        📁 Upload PDF / File
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setUploadMode('link')}
+                        className={`py-2 px-3 text-xs font-semibold rounded-lg transition-all ${uploadMode === 'link' ? 'bg-primary-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+                      >
+                        🔗 Google Drive Link
+                      </button>
+                    </div>
                   </div>
+
+                  {uploadMode === 'file' ? (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-1.5">Select PDF or Document *</label>
+                      <input 
+                        type="file" 
+                        required={uploadMode === 'file'}
+                        accept=".pdf,.doc,.docx,.ppt,.pptx,.txt"
+                        onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                        className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-slate-200 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary-600 file:text-white hover:file:bg-primary-700 cursor-pointer outline-none transition-colors"
+                      />
+                      {selectedFile && (
+                        <p className="text-xs text-primary-400 mt-1.5 flex items-center gap-1 font-medium">
+                          Selected: {selectedFile.name} ({(selectedFile.size / (1024 * 1024)).toFixed(2)} MB)
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-1.5">Public Web URL *</label>
+                      <input 
+                        type="url" 
+                        required={uploadMode === 'link'} 
+                        value={uploadData.file_url} 
+                        onChange={(e) => setUploadData({ ...uploadData, file_url: e.target.value })} 
+                        className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-slate-500 outline-none focus:border-primary-500 transition-colors" 
+                        placeholder="https://drive.google.com/..." 
+                      />
+                      <p className="text-[11px] text-slate-400 mt-1">Must start with https:// (local file paths like C:/ are not allowed).</p>
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-1.5">Material Type *</label>
                     <select required value={uploadData.material_type} onChange={(e) => setUploadData({ ...uploadData, material_type: e.target.value })} className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white outline-none focus:border-primary-500 transition-colors [&>option]:bg-slate-900">
