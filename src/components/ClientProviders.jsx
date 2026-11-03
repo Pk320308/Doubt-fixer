@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import InteractiveParticleBackground from '@/components/InteractiveParticleBackground'
+import VisitorTracker from '@/components/VisitorTracker'
 
 function HealthPing() {
   useEffect(() => {
@@ -39,6 +40,7 @@ export default function ClientProviders({ children }) {
   return (
     <AuthProvider>
       <HealthPing />
+      <VisitorTracker />
       <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-950 via-slate-900 to-black text-slate-100 relative">
         <InteractiveParticleBackground />
         <Header />

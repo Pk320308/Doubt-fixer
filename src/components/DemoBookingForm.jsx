@@ -73,6 +73,30 @@ export default function DemoBookingForm() {
     if (!error) {
       if (session?.user?.id) localStorage.setItem('demo_booked_' + session.user.id, 'true')
       setSuccess(true)
+
+      // Send Instant WhatsApp & Email Notification
+      try {
+        fetch('/api/notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'demo',
+            data: {
+              student_name: formData.student_name,
+              parent_name: formData.parent_name,
+              phone: formData.mobile_number || formData.whatsapp_number,
+              whatsapp_number: formData.whatsapp_number,
+              class_name: formData.class,
+              school_name: formData.school_name,
+              subject: isRegularClass ? formData.subject_required : formData.class,
+              preferred_timing: formData.preferred_timing,
+              area_location: formData.area_location
+            }
+          })
+        }).catch(() => {})
+      } catch {
+        // Non-blocking
+      }
     } else {
       alert(error.message)
     }

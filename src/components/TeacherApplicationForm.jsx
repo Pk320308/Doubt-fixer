@@ -50,6 +50,29 @@ export default function TeacherApplicationForm() {
 
     if (!error) {
       setSuccess(true)
+
+      // Send Instant WhatsApp & Email Notification
+      try {
+        fetch('/api/notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'teacher',
+            data: {
+              full_name: formData.full_name,
+              phone: formData.mobile_number,
+              email: formData.email,
+              qualification: formData.qualification,
+              experience: formData.experience,
+              area_location: formData.area_location,
+              subjects: (formData.subjects || []).join(', '),
+              resume_link: formData.resume_url
+            }
+          })
+        }).catch(() => {})
+      } catch {
+        // Non-blocking
+      }
     }
   }
 
