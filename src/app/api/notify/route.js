@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+
 // Default fallback admin details if not set in environment
 const ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'doubtfixxer9918@gmail.com'
 const RESEND_API_KEY = process.env.RESEND_API_KEY
