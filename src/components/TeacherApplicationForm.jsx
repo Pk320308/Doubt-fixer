@@ -45,35 +45,42 @@ export default function TeacherApplicationForm() {
     }
 
     setLoading(true)
-    const { error } = await supabase.from('teacher_applications').insert([formData])
-    setLoading(false)
 
-    if (!error) {
-      setSuccess(true)
-
-      // Send Instant WhatsApp & Email Notification
-      try {
-        fetch('/api/notify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'teacher',
-            data: {
-              full_name: formData.full_name,
-              phone: formData.mobile_number,
-              email: formData.email,
-              qualification: formData.qualification,
-              experience: formData.experience,
-              area_location: formData.area_location,
-              subjects: (formData.subjects || []).join(', '),
-              resume_link: formData.resume_url
-            }
-          })
-        }).catch(() => {})
-      } catch {
-        // Non-blocking
-      }
+    // 1. Send Instant WhatsApp & Email Notification
+    try {
+      await fetch('/api/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'teacher',
+          data: {
+            full_name: formData.full_name,
+            phone: formData.mobile_number,
+            email: formData.email,
+            qualification: formData.qualification,
+            experience: formData.experience,
+            area_location: formData.area_location,
+            subjects: (formData.subjects || []).join(', '),
+            resume_link: formData.resume_url
+          }
+        })
+      })
+    } catch (err) {
+      console.error('Notify Error:', err)
     }
+
+    // 2. Insert into Supabase
+    try {
+      const { error } = await supabase.from('teacher_applications').insert([formData])
+      if (error) {
+        console.warn('Teacher application DB notice:', error.message)
+      }
+    } catch (e) {
+      console.warn('Supabase insert exception:', e)
+    }
+
+    setLoading(false)
+    setSuccess(true)
   }
 
   if (success) {

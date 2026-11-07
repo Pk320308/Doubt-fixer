@@ -691,32 +691,38 @@ function ContactForm() {
     e.preventDefault()
     setLoading(true)
 
-    const { error } = await supabase.from('contact_submissions').insert([formData])
+    // 1. Send Instant WhatsApp & Email Notification
+    try {
+      await fetch('/api/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'contact',
+          data: {
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone,
+            message: formData.message
+          }
+        })
+      })
+    } catch (err) {
+      console.error('Notify Error:', err)
+    }
+
+    // 2. Insert into Supabase
+    try {
+      const { error } = await supabase.from('contact_submissions').insert([formData])
+      if (error) {
+        console.warn('Contact submission DB notice:', error.message)
+      }
+    } catch (e) {
+      console.warn('Supabase insert exception:', e)
+    }
 
     setLoading(false)
-    if (!error) {
-      setSuccess(true)
-      setFormData({ name: '', email: '', phone: '', message: '' })
-
-      // Send Instant WhatsApp & Email Notification
-      try {
-        fetch('/api/notify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'contact',
-            data: {
-              name: formData.name,
-              email: formData.email,
-              phone: formData.phone,
-              message: formData.message
-            }
-          })
-        }).catch(() => {})
-      } catch {
-        // Non-blocking
-      }
-    }
+    setSuccess(true)
+    setFormData({ name: '', email: '', phone: '', message: '' })
   }
 
   if (success) {

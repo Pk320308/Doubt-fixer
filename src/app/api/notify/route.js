@@ -74,11 +74,53 @@ async function sendEmail({ subject, htmlContent }) {
     })
 
     const data = await res.json()
+    console.log('[Resend Response]:', data)
     return { success: res.ok, data }
   } catch (err) {
     console.error('[Email Notification Error]:', err.message)
     return { success: false, error: err.message }
   }
+}
+
+/**
+ * Diagnostic GET endpoint to test Resend API key & Email from browser directly
+ */
+export async function GET() {
+  const apiKey = process.env.RESEND_API_KEY || RESEND_API_KEY
+  const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL || ADMIN_EMAIL
+
+  if (!apiKey) {
+    return NextResponse.json({
+      status: 'error',
+      message: 'RESEND_API_KEY is missing in environment variables on Vercel!',
+      config: {
+        hasApiKey: false,
+        adminEmail: adminEmail || 'not set'
+      }
+    }, { status: 500 })
+  }
+
+  const testEmailResult = await sendEmail({
+    subject: '🧪 Doubt Fixer Diagnostic Test Email',
+    htmlContent: `
+      <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+        <h2 style="color: #16a34a;">✅ Resend Email Integration is Working!</h2>
+        <p>This is a live test email sent directly from your Doubt Fixer website on Vercel.</p>
+        <p><strong>Configured Recipient:</strong> ${adminEmail}</p>
+        <p><strong>Time:</strong> ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</p>
+      </div>
+    `
+  })
+
+  return NextResponse.json({
+    status: 'diagnostics',
+    config: {
+      hasApiKey: !!apiKey,
+      apiKeyPrefix: apiKey ? apiKey.substring(0, 7) + '...' : null,
+      adminEmail: adminEmail || 'not set'
+    },
+    resendResult: testEmailResult
+  })
 }
 
 export async function POST(request) {
